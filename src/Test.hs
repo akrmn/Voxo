@@ -21,182 +21,110 @@ simple = Sequence
   , TracePos
   , SaveTo "out.vox" ]
 
-aCube :: VoxoCommand
-aCube = Sequence
-  [ Frames On
-  , SetColor 4
-  , Go Forward 20
-  , StoreFrame
+eightCubes :: VoxoCommand
+eightCubes = Sequence
+  [ fourCubes 0
+  , Go Up 11
+  , fourCubes 40
+  , Frames On
+  , SaveTo "out4.vox" ]
 
-  , Turn Right
-  , SetColor 8
-  , Go Forward 20
-  , StoreFrame
-
-  , Turn Right
-  , SetColor 12
-  , Go Forward 20
-  , StoreFrame
-
-  , Turn Right
-  , SetColor 16
-  , Go Forward 20
-  , StoreFrame
-
-  , Turn Right
-  , SetColor 20
-  , Go Up 20
-  , StoreFrame
-
-  , SetColor 24
-  , Go Forward 20
-  , StoreFrame
-
-  , Turn Right
-  , SetColor 28
-  , Go Forward 20
-  , StoreFrame
-
-  , Turn Right
-  , SetColor 32
-  , Go Forward 20
-  , StoreFrame
-
-  , Turn Right
-  , SetColor 36
-  , Go Forward 20
-  , StoreFrame
-
-  , Turn Right
-  , SetColor 40
-  , Mode Move
-  , Go Forward 20
-  , Mode Fill
-  , Go Down 20
-  , StoreFrame
-
-  , Turn Right
-  , SetColor 44
-  , Mode Move
-  , Go Forward 20
-  , Mode Fill
-  , Go Up 20
-  , StoreFrame
-
-  , Turn Right
-  , SetColor 48
-  , Mode Move
-  , Go Forward 20
-  , Mode Fill
-  , Go Down 20
-  , StoreFrame
-  , SaveTo "out.vox"
+fourCubes :: Word8 -> VoxoCommand
+fourCubes n = Sequence
+  [ aCube (n + 0)
+  , store'
+  , Mode Move, Go Forward 11 
+  , aCube (n + 13)
+  , store'
+  , Mode Move, Go Right 11
+  , aCube (n + 26)
+  , store'
+  , Mode Move, Go Back 11
+  , aCube (n + 39)
+  , store'
+  , Mode Move, Go Left 11
   ]
 
--- aSquare :: VoxoCommand
--- aSquare = Sequence
---   [ Forward 20
---   , StoreFrame
---   , SetColor 5
---   , Turn Z'
---   , Forward 20
---   , StoreFrame
---   , SetColor 10
---   , Turn Z'
---   , Forward 20
---   , StoreFrame
---   , SetColor 15
---   , Turn Z'
---   , Forward 20
---   , StoreFrame
---   , SaveTo "out.vox"
---   ]
+store' :: VoxoCommand
+store' = Sequence
+  [ Frames On, StoreFrame, Frames Off ]
 
--- myVoxo :: VoxoCommand
--- myVoxo = Sequence
---   [ Frames Off
---   , squaryy 10
---   , SaveTo "out.vox" ]
+aCube :: Word8 -> VoxoCommand
+aCube n = Sequence
+  [ Debug Off
+  , Frames Off
+  , Mode Fill
+  , SetColor (n +1)
+  , Go Forward 10
+  , StoreFrame
 
--- squaryy :: Word8 -> VoxoCommand
--- squaryy n = Sequence
---   [ 
---     -- squary n
---     Mode Move
---   , Forward n
+  , Turn Right
+  , SetColor (n +2)
+  , Go Forward 10
+  , StoreFrame
 
---   -- , Frames On
---   -- , StoreFrame
---   -- , Frames Off
+  , Turn Right
+  , SetColor (n +3)
+  , Go Forward 10
+  , StoreFrame
 
---   -- , squary n
---   -- , Mode Move
---   , Turn Z'
---   , Forward n
+  , Turn Right
+  , SetColor (n +4)
+  , Go Forward 10
+  , StoreFrame
 
---   -- , Frames On
---   -- , StoreFrame
---   -- , Frames Off
+  , Turn Right
+  , SetColor (n +5)
+  , Go Up 10
+  , StoreFrame
 
---   , Frames On
+  , SetColor (n +6)
+  , Go Forward 10
+  , StoreFrame
 
---   , squary n
---   , Mode Move
---   , Turn Z'
---   , Forward n
+  , Turn Right
+  , SetColor (n +7)
+  , Go Forward 10
+  , StoreFrame
 
---   -- , Frames On
---   -- , StoreFrame
---   -- , Frames Off
+  , Turn Right
+  , SetColor (n +8)
+  , Go Forward 10
+  , StoreFrame
 
---   -- , squary n
---   -- , Mode Move
---   -- , Turn Z'
---   -- , Forward n
+  , Turn Right
+  , SetColor (n +9)
+  , Mode Draw
+  , Go Forward 10
+  , Mode Fill
+  , StoreFrame
 
---   , Frames On
---   , StoreFrame
+  , Turn Right
+  , SetColor (n +10)
+  , Mode Move
+  , Go Forward 10
+  , Mode Fill
+  , Go Down 10
+  , StoreFrame
 
---   ]
+  , Turn Right
+  , SetColor (n +11)
+  , Mode Move
+  , Go Forward 10
+  , Mode Fill
+  , Go Up 10
+  , StoreFrame
 
--- squary :: Word8 -> VoxoCommand
--- squary n = Sequence
---   [ Mode Fill
---   , squary' n
---   , StoreFrame
---   , Turn X'
---   , Mode Move
---   , Forward n
---   , Mode Fill
---   , Turn X
---   , StoreFrame 
---   ]
+  , Turn Right
+  , SetColor (n +12)
+  , Mode Move
+  , Go Forward 10
+  , Mode Fill
+  , Go Down 10
+  , StoreFrame
 
---   where
---     squary' :: Word8 -> VoxoCommand
---     squary' 0 = Nop
---     squary' n = Sequence [square n, StoreFrame, oneUp, squary' (n-1)]
-
---     square n = Sequence
---       [ SetColor n
---       , Forward n
---       , Turn Z'
---       , SetColor (n*2)
---       , Forward n
---       , Turn Z'
---       , SetColor (n*3)
---       , Forward n
---       , Turn Z'
---       , SetColor (n*4)
---       , Forward n
---       , Turn Z' 
---       ]
-
---     oneUp = Sequence
---       [ Turn X
---       , Mode Move
---       , Forward 1
---       , Mode Fill
---       , Turn X'
---       ]
-
+  , Mode Move
+  , Turn Right
+  , Go Forward 10
+  , Turn Right
+  ]

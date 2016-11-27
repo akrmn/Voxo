@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase      #-}
 {-# LANGUAGE NamedFieldPuns  #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Language.Voxo
   ( VoxoCommand (..)
@@ -12,11 +12,11 @@ module Language.Voxo
   , Switch (..)
   , runVoxo ) where
 
-import           Control.Lens              (both, makeLenses, use, (%=), (%~),
-                                            (&), (.=), (.~), (<&>))
+import           Control.Lens              (both, each, makeLenses, use, (%=),
+                                            (%~), (&), (.=), (.~), (<&>))
 import           Control.Monad             (forM_, when)
 import           Control.Monad.Trans.State (StateT (..), evalStateT)
-import           Data.Array                (Array, (!), listArray)
+import           Data.Array                (Array, listArray, (!))
 import           Data.Array.IO             (IOArray)
 import           Data.Array.MArray         (freeze, getBounds, newArray,
                                             readArray, writeArray)
@@ -31,8 +31,8 @@ import qualified Data.Sequence             as Seq (empty, singleton)
 import           Data.Vox
 import           Data.Word                 (Word8)
 import           MonadUtils                (liftIO)
-import           System.IO                 (IOMode (WriteMode), openFile)
 import           Prelude                   hiding (Either (..))
+import           System.IO                 (IOMode (WriteMode), openFile)
 
 type Distance = Int
 
@@ -87,12 +87,12 @@ data Axis
 opTable :: Array (Axis, Axis) Axis
 opTable = listArray ((X, X), (Z', Z'))
   {-  <>   X   Y   Z     X'  Y'  Z'-}
-  {-X -} [ X , Z , Y',   X , Z', Y  
-  {-Y -} , Z', Y , X ,   Z , Y , X' 
-  {-Z -} , Y , X', Z ,   Y', X , Z  
+  {-X -} [ X , Z , Y',   X , Z', Y
+  {-Y -} , Z', Y , X ,   Z , Y , X'
+  {-Z -} , Y , X', Z ,   Y', X , Z
 
-  {-X'-} , X', Z', Y ,   X', Z , Y' 
-  {-Y'-} , Z , Y', X',   Z', Y', X  
+  {-X'-} , X', Z', Y ,   X', Z , Y'
+  {-Y'-} , Z , Y', X',   Z', Y', X
   {-Z'-} , Y', X , Z',   Y , X', Z' ]
 
 instance Semigroup Axis where
@@ -126,16 +126,8 @@ initialVoxoState = VoxoState
   , _voxels      = undefined }
 
 
-bound :: (Point, Point) -> Point -> Point
-bound ((lx, ly, lz), (hx, hy, hz)) (x, y, z) =
-  ( (x `max` lx) `min` hx
-  , (y `max` ly) `min` hy
-  , (z `max` lz) `min` hz
-  )
-
-
 move :: Point -> Axis -> Distance -> StateT VoxoState IO (Point, Point)
-move (x, y, z) a di = do
+move p a d = do
   bounds <- liftIO . getBounds =<< use voxels
   pure . (both %~ bound bounds) $ case a of
     X  -> ((x + d', y, z), (x + d, y, z))
@@ -146,10 +138,21 @@ move (x, y, z) a di = do
     Z' -> ((x, y, z - d'), (x, y, z - d))
 
   where
-    d  = fromIntegral di
-    d' | di == 0 =  0
-       | di >  0 =  1
-       | di <  0 = -1
+    (x :: Int, y, z) = p & each %~ fromIntegral
+    d' | d == 0 =  0
+       | d >  0 =  1
+       | d <  0 = -1
+
+    bound :: (Point, Point)
+          -> (Int, Int, Int)
+          -> Point
+    bound (low, high) (x, y, z) =
+      let (lx, ly, lz) = low  & each %~ fromIntegral
+          (hx, hy, hz) = high & each %~ fromIntegral
+      in  ( (x `max` lx) `min` hx
+          , (y `max` ly) `min` hy
+          , (z `max` lz) `min` hz
+          ) & each %~ fromIntegral
 
 
 runVoxo :: VoxoCommand -> IO ()
@@ -177,7 +180,7 @@ runVoxo' = \case
           then []
           else range (p' `min` q, p' `max` q)
 
-    -- use debugSw >>= flip when (liftIO $ print (p, (u<>r), units, p', q, vxls)) . toBool
+    use debugSw >>= flip when (liftIO $ print (p, (u<>r), units, p', q, vxls)) . toBool
 
     case m of
       Draw  -> liftIO . forM_ vxls $ \vxl -> writeArray arr vxl c
@@ -201,7 +204,7 @@ runVoxo' = \case
     [ Turn Right
     , Go Forward n
     , Turn Left ]
-    
+
   Go Back n -> runVoxo' $ Go Forward (-n)
   Go Down n -> runVoxo' $ Go Up      (-n)
   Go Left n -> runVoxo' $ Go Right   (-n)
@@ -246,7 +249,7 @@ runVoxo' = \case
       frames %= (|> model)
 
   SaveTo path -> do
-    models <- use framesSw >>= \case 
+    models <- use framesSw >>= \case
       On  -> use frames
       Off -> fmap (Seq.singleton . Model) $ liftIO . freeze =<< use voxels
     palette <- use stpalette
@@ -260,4 +263,4 @@ runVoxo' = \case
 
   Trace msg -> liftIO $ putStrLn msg
 
-  TracePos -> use pos >>= liftIO . print
+  TracePos -> (,) <$> use pos <*> use orientation >>= liftIO . print
