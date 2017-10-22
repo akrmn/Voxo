@@ -106,7 +106,7 @@ data VoxoState = VoxoState
   , _mode        :: Mode
   , _color       :: Word8
   , _stpalette   :: Palette
-  , _frames      :: Seq Model
+  , _frames      :: Seq (Dict Point Word8)
   , _framesSw    :: Switch
   , _debugSw     :: Switch
   , _voxels      :: IOArray Point Word8 }

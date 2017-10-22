@@ -4,28 +4,28 @@
 
 module Data.Vox.Get where
 
-import           Control.Monad        (forM_, replicateM, replicateM_, void,
-                                       when)
+import           Control.Monad        (replicateM, void, when)
 import           Data.Array           (listArray)
-import           Data.Array.ST        (newArray, runSTUArray, writeArray)
 import           Data.Binary.Get
 import qualified Data.ByteString.Lazy as BL
 import           Data.Char            (chr)
 import           Data.Semigroup       (Semigroup (..))
-import           Data.Sequence        (Seq)
-import qualified Data.Sequence        as Seq (empty, replicateM)
+import qualified Data.Sequence        as Seq (replicateM)
 import           Data.Vox.Palette     (Color (..), Palette (..))
-import           Data.Vox.VoxData     (Model (..), Vox (..), Voxel)
+import           Data.Vox.VoxData
+import           Data.Vox.Model
 import           Data.Word            (Word8)
 
-parseVoxFileStream :: BL.ByteString -> Either (ByteOffset, String) Vox
+parseVoxFileStream :: (Model model)
+  => BL.ByteString
+  -> Either (ByteOffset, String) (Vox model)
 parseVoxFileStream input =
    case runGetOrFail getVox input of
-      Left (_, offset, error) -> Left (offset, error)
-      Right (_, _, result)    -> Right result
+      Left (_, offset, err) -> Left (offset, err)
+      Right (_, _, result)  -> Right result
 
 
-getVox :: Get Vox
+getVox :: Model model => Get (Vox model)
 getVox = do
   ident <- getIdentifier
   when (ident /= "VOX ") . fail $
@@ -70,9 +70,9 @@ getPackChunk = do
     _ -> pure 1
 
 
-getModel :: Get Model
+getModel :: Model model => Get (model Point Word8)
 getModel = do
-  (x, y, z) <- getSize
+  V3 x y z <- getSize
   ident <- getIdentifier
   when (ident /= "XYZI") . fail $
     "Expected XYZI chunk instead of " <> ident <> "."
@@ -80,20 +80,17 @@ getModel = do
   contentsBytes <- getInt
   childrenBytes <- getInt
 
-  (numVoxels, voxels) <- isolate contentsBytes $ do
+  (_numVoxels, voxels) <- isolate contentsBytes $ do
     numVoxels <- getInt
     voxels <- replicateM numVoxels getVoxel
     pure (numVoxels, voxels)
 
   when (childrenBytes /= 0) $ fail "XYZI chunk cannot have children."
 
-  pure . Model $ runSTUArray $ do
-    vxls <- newArray ((0, 0, 0), (x-1, y-1, z-1)) 0
-    forM_ voxels $ \((x', y', z'), c) -> writeArray vxls (x', y', z') c
-    pure vxls
+  pure $ fromVoxels (V3 0 0 0, V3 (x-1) (y-1) (z-1)) voxels
 
 
-getSize :: Get (Word8, Word8, Word8)
+getSize :: Get Point
 getSize = do
   ident <- getIdentifier
   when (ident /= "SIZE") . fail $
@@ -103,7 +100,7 @@ getSize = do
   childrenBytes <- getInt
 
   dims <- isolate contentsBytes $
-    (,,) <$> getInt' <*> getInt' <*> getInt'
+    V3 <$> getInt' <*> getInt' <*> getInt'
 
   when (childrenBytes /= 0) $ fail "SIZE chunk cannot have children."
 
@@ -119,7 +116,7 @@ getSize = do
 
 getVoxel :: Get Voxel
 getVoxel = aux <$> getWord8 <*> getWord8 <*> getWord8 <*> getWord8
-  where aux x y z w = ((x, y, z), w)
+  where aux x y z w = (V3 x y z, w)
 
 
 getPalette :: Get Palette

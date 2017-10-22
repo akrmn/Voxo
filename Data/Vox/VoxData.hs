@@ -1,26 +1,14 @@
 module Data.Vox.VoxData
   ( Vox (..)
-  , Model (..)
   , Point
   , Voxel
+  , Word8
   ) where
 
-import           Data.Array.Unboxed  (UArray)
-import           Data.Binary      (Binary)
-import           Data.Binary.Get  (getWord32le)
-import           Data.Binary.Put  (putWord32le)
-import           Data.Sequence    (Seq)
-import           Data.Vox.Palette (Palette (..))
-import           Data.Word        (Word8)
+import Data.Sequence    (Seq)
+import Data.Vox.Model
+import Data.Vox.Palette (Palette (..))
 
-type Point = (Word8, Word8, Word8)
-
-data Vox = Vox
-  { models  :: Seq Model
+data Vox model = Vox
+  { models  :: Seq (model Point Word8)
   , palette :: Palette }
-  deriving (Show)
-
-newtype Model = Model (UArray Point Word8)
-  deriving (Show)
-
-type Voxel = (Point, Word8)

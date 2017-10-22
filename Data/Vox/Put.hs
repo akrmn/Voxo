@@ -5,22 +5,14 @@
 
 module Data.Vox.Put where
 
-import           Control.Monad             (forM_, replicateM, replicateM_,
-                                            void, when)
-import           Data.Array                (listArray)
-import           Data.Array.IArray         (assocs, bounds)
-import           Data.Binary.Put
-import qualified Data.ByteString.Lazy      as BL
-import           Data.Char                 (chr)
-import           Data.Semigroup            (Semigroup (..))
-import           Data.Sequence             (Seq)
-import qualified Data.Sequence             as Seq (empty, replicateM)
-import           Data.Vox.Internal.Sizable (Sizable (..))
-import           Data.Vox.Palette          (Color (..), Palette (..))
-import           Data.Vox.VoxData          (Model (..), Vox (..), Voxel)
-import           Data.Word                 (Word8)
+import Control.Monad             (forM_)
+import Data.Binary.Put
+import Data.Vox.Internal.Sizable (Sizable (..))
+import Data.Vox.Palette          (Color (..), Palette (..))
+import Data.Vox.VoxData          (Vox (..))
+import Data.Vox.Model
 
-putVox :: Vox -> Put
+putVox :: Model model => Vox model -> Put
 putVox v@Vox { models, palette } = do
   putByteString "VOX "
   putInt 150 -- Version Number
@@ -34,26 +26,28 @@ putVox v@Vox { models, palette } = do
   putInt 0
   putInt . length $ models
 
-  forM_ models $ \m@(Model vxls) -> do
+  forM_ models $ \model -> do
     putByteString "SIZE"
     putInt 12
-    putInt 0
+    putInt 0 -- no children
 
-    let (_, (x, y, z)) = bounds vxls
+    let (_, V3 x y z) = bounds model
 
     putInt . succ . fromIntegral $ x
     putInt . succ . fromIntegral $ y
     putInt . succ . fromIntegral $ z
 
     putByteString "XYZI"
-    putInt . size $ m
-    putInt 0
+    putInt . size $ model
+      -- ^ Here I'm saying how many bytes there are in the XYZI section
+    putInt 0 -- no children
 
-    let voxels = filter ((/= 0) . snd) (assocs vxls)
+    let voxels = toVoxels model
 
     putInt (length voxels)
+      -- ^ While here I'm saying how many *voxels* there are.
 
-    forM_ voxels $ \((x', y', z'), c) -> putWord8 x'
+    forM_ voxels $ \(V3 x' y' z', c)  -> putWord8 x'
                                       >> putWord8 y'
                                       >> putWord8 z'
                                       >> putWord8 c
